@@ -12,10 +12,13 @@ type Props = {};
 const Chessboard = (props: Props) => {
   let board = [];
   const [pieces,setPieces] = useState<Pieces[]>(piece);
+  const [promotionPawn,setPromotionPawn] = useState<Pieces>();
   const chessboardref = useRef<HTMLDivElement>(null);
+  const pawnPromotionRef = useRef<HTMLDivElement>(null);
   const [activePiece, setActivePiece] = useState< HTMLElement | null >(null)
   const [grabPosition, setGrabPosition] = useState<Position >({x:-1,y:-1});
   const rules = new Rules();
+  const [colorOfPiece, setColorOfPiece] = useState("W");
   function grabPiece(event: React.MouseEvent) {
     const element = event.target as HTMLElement;
     const chessboard = chessboardref.current
@@ -84,7 +87,13 @@ const Chessboard = (props: Props) => {
               piece.enPassant = Math.abs(grabPosition.y - y) === 2 && piece.type === PieceType.PAWN
               piece.position.x = x;
               piece.position.y = y;
-              // console.log("piece : ",piece);              
+              // console.log("piece : ",piece);   
+              let promotionRow = piece.team === TeamType.BLACK ? 0: 7
+              if (y === promotionRow && piece.type === PieceType.PAWN){
+                setPromotionPawn(piece);
+                setColorOfPiece(piece.team === TeamType.BLACK? "B":"W")
+                pawnPromotionRef.current?.classList.remove("hidden");
+              }           
               result.push(piece)
             }else if(!samePosition(piece.position,{x:x,y:y})){   
               if(piece.type === PieceType.PAWN){
@@ -106,6 +115,30 @@ const Chessboard = (props: Props) => {
       setActivePiece(null)
     }
   }
+  function promotePawn(type:PieceType,color:string){
+    if(!promotionPawn){
+      return
+    }else{
+      const updatedPieces = pieces.reduce((result,piece)=>{
+        if(samePosition(piece.position,promotionPawn.position)){
+          piece.type = type
+          let image = "";
+          switch(type){
+            case PieceType.BISHOP:image = `/bishop${color}.png`;break;
+            case PieceType.ROOK:image = `/rook${color}.png`;break;
+            case PieceType.KNIGHT:image = `/knight${color}.png`;break;
+            case PieceType.QUEEN:image = `/queen${color}.png`;break;
+          }
+          piece.image = image;
+        }
+        
+      result.push(piece)
+      return result
+    },[] as Pieces[])
+    setPieces(updatedPieces);
+    pawnPromotionRef.current?.classList.add("hidden");
+  }
+  }
   for (let j = VERTICALAXIS.length-1;j>=0; j--) {
     for (let i = 0; i < HORIZONTALAXIS.length; i++) {
       let num = i + j + 2;
@@ -118,15 +151,25 @@ const Chessboard = (props: Props) => {
   
  
   return (
-    <div
-      onMouseMove={(e) => movePiece(e)}
-      onMouseDown={(e) => grabPiece(e)}
-      onMouseUp={(e) => dropPiece(e)}
-      className="chessboard"
-      ref={chessboardref}
-    >
-      {board}
-    </div>
+    <>
+      <div id="pawn-promotion-modal" className="hidden" ref={pawnPromotionRef}>
+        <div id="modal-body">
+          <Image src={`/rook${colorOfPiece}.png`} onClick={()=>promotePawn(PieceType.ROOK,colorOfPiece )} width={100} height={100} alt="rook"/>
+          <Image src={`/knight${colorOfPiece}.png`} onClick={()=>promotePawn(PieceType.KNIGHT,colorOfPiece )} width={100} height={100} alt="knight"/>
+          <Image src={`/bishop${colorOfPiece}.png`} onClick={()=>promotePawn(PieceType.BISHOP,colorOfPiece )} width={100} height={100} alt="bishop"/>
+          <Image src={`/queen${colorOfPiece}.png`} onClick={()=>promotePawn(PieceType.QUEEN,colorOfPiece )} width={100} height={100} alt="queen"/>
+        </div>
+      </div>
+      <div
+        onMouseMove={(e) => movePiece(e)}
+        onMouseDown={(e) => grabPiece(e)}
+        onMouseUp={(e) => dropPiece(e)}
+        className="chessboard"
+        ref={chessboardref}
+        >
+        {board}
+      </div>
+    </>
   );
 };
 
