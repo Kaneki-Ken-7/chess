@@ -14,6 +14,7 @@ export interface Pieces {
   type:PieceType;
   team:TeamType;
   enPassant?:boolean;
+  possibleMoves?:Position[]
 }
 
 export enum TeamType{

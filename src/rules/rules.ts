@@ -1,10 +1,18 @@
 import { Pieces, TeamType, PieceType, Position, samePosition } from "@/constants/constants"
+import pawnRule from "./pawnRules";
+import knightRule, { getPossibleKnightMoves } from "./knightRules";
+import rookRule, { getPossibleRookMoves } from "./rookRules";
+import queenRule, { getPossibleQueenMoves } from "./queenRules";
+import bishopRule, { getPossibleBishopMoves } from "./bishopRules";
+import kingRule, { getPossibleKingMoves } from "./kingRules";
+import { getPossiblePawnMoves } from "./pawnRules";
 
 export default class Rules {
 
     tileIsEmptyOrOccupiedByOpponent(position:Position, boardState:Pieces[], team:TeamType) : boolean{
         return !this.isTileOccupied(position,boardState) || this.tileIsOccupiedByOpponent(position,boardState,team)
     }
+
     checkRookIllegalMove(desiredPosition:Position,initialPosition:Position,boardState:Pieces[],team:TeamType){
         let xSign = (desiredPosition.x - initialPosition.x) === 0 ? 0 :(desiredPosition.x - initialPosition.x) > 0? 1: -1;
         let ySign = (desiredPosition.y - initialPosition.y) === 0 ? 0 :(desiredPosition.y - initialPosition.y) > 0? 1: -1;
@@ -27,6 +35,7 @@ export default class Rules {
         }
         return illegal;
     }
+
     checkBishopIllegalMove(desiredPosition:Position,initialPosition:Position,boardState:Pieces[],team:TeamType){
         let xSign = (desiredPosition.x - initialPosition.x) > 0 ? 1 : -1;
         let ySign = (desiredPosition.y - initialPosition.y) > 0 ? 1 : -1;
@@ -49,6 +58,7 @@ export default class Rules {
         }
         return illegal
     }
+
     isTileOccupied(position:Position,boardState:Pieces[]) : boolean{
         const piece = boardState.find(p=> samePosition(p.position,position))
         if(piece){
@@ -68,7 +78,6 @@ export default class Rules {
     }
 
     isEnpassantMove(initialPosition:Position,desiredPosition:Position,type:PieceType, team:TeamType,boardState:Pieces[]):boolean{
-
         const pawnDirection = team === TeamType.WHITE ? 1 : -1;
         if(type === PieceType.PAWN){
             if((desiredPosition.x - initialPosition.x === -1 || desiredPosition.x - initialPosition.x === 1) && desiredPosition.y - initialPosition.y === pawnDirection){
@@ -83,6 +92,7 @@ export default class Rules {
         }
         return false;
     }
+
     checkKingIllegalMove(initialPosition:Position, desiredPosition:Position, boardState:Pieces[], team:TeamType) : boolean{
         let xSign = 0
         let ySign = 0
@@ -97,8 +107,6 @@ export default class Rules {
             }else if(desiredPosition.y > initialPosition.y ){
                 ySign = 1
             }
-            console.log("sign",xSign,ySign);
-            
             let passedPosition:Position = {x:initialPosition.x + xSign,y:initialPosition.y+ySign}
             if(samePosition(passedPosition,desiredPosition)){
                 if(this.isTileOccupied(passedPosition,boardState)){
@@ -117,112 +125,55 @@ export default class Rules {
     }
     isValid(initialPosition:Position,desiredPosition:Position,type:PieceType, team:TeamType,boardState:Pieces[]){
         // console.clear()
-        if(type === PieceType.PAWN){
-            if(!samePosition(desiredPosition,initialPosition)){
-                const specialRow = team === TeamType.WHITE ? 1 : 6;
-                const pawnDirection = team === TeamType.WHITE ? 1 : -1;
-                
-                //PAWN Movement Logic
-                if(initialPosition.y === specialRow && initialPosition.x === desiredPosition.x && desiredPosition.y - initialPosition.y === 2*pawnDirection){
-                    if(!this.isTileOccupied(desiredPosition,boardState) && !this.isTileOccupied({x:desiredPosition.x,y:desiredPosition.y-pawnDirection},boardState)){
-                        return true;
-                    }
-                }else if (initialPosition.x === desiredPosition.x && desiredPosition.y - initialPosition.y === pawnDirection) {
-                        if(!this.isTileOccupied(desiredPosition,boardState)){
-                            return true;
-                        }     
-                }
-                //PAWN Attacking Logic
-                else if(desiredPosition.x - initialPosition.x === -1 && desiredPosition.y - initialPosition.y === pawnDirection){
-                    if(this.tileIsOccupiedByOpponent(desiredPosition,boardState,team)){
-                        return true
-                    }
-                }
-                else if(desiredPosition.x - initialPosition.x === 1 && desiredPosition.y - initialPosition.y === pawnDirection){
-                    if(this.tileIsOccupiedByOpponent(desiredPosition,boardState,team)){
-                        return true
-                    }
-                }
-            }
-        }else if(type === PieceType.KNIGHT){
-            if(!samePosition(desiredPosition,initialPosition)){
-                for (let i = -1; i < 2; i+=2) {
-                    for (let j = -1; j < 2; j+=2) {
-                        if(desiredPosition.y - initialPosition.y === 2 * i){
-                            if(desiredPosition.x - initialPosition.x === j){
-                                if(this.tileIsEmptyOrOccupiedByOpponent(desiredPosition,boardState,team)){
-                                    return true;
-                                }   
-                            }
-                        }
-                        if(desiredPosition.x - initialPosition.x === 2 * i){
-                            if(desiredPosition.y - initialPosition.y === j){
-                                if(this.tileIsEmptyOrOccupiedByOpponent(desiredPosition,boardState,team)){
-                                    return true;
-                                }  
-                            }
-                        }
-                    }                
-                }
-            }
+        switch (type) {
+            case PieceType.PAWN:
+                return pawnRule(desiredPosition,initialPosition, team,boardState);
+                break;
+            case PieceType.KNIGHT:
+                return knightRule(desiredPosition,initialPosition, team,boardState);
+                break;
+            case PieceType.ROOK:
+                return rookRule(desiredPosition,initialPosition, team,boardState);
+                break;
+            case PieceType.BISHOP:
+                return bishopRule(desiredPosition,initialPosition, team,boardState);
+                break;
+            case PieceType.QUEEN:
+                return queenRule(desiredPosition,initialPosition, team,boardState);
+                break;
+            case PieceType.KING:
+                return kingRule(desiredPosition,initialPosition, team,boardState);
+                break;
+        
+            default: return false;
+                break;
         }
-        else if(type === PieceType.ROOK){
-            if(!samePosition(desiredPosition,initialPosition)){
-                if((desiredPosition.x === initialPosition.x && desiredPosition.y !== initialPosition.y )||(desiredPosition.y === initialPosition.y && desiredPosition.x !== initialPosition.x )){
-                    if(!this.checkRookIllegalMove(desiredPosition,initialPosition,boardState,team)){
-                        return true
-                    }
-                }
-               
-            }
-        }
-        else if(type === PieceType.BISHOP){
-            if(!samePosition(desiredPosition,initialPosition)){
-                for (let i = -1; i < 2; i+=2) {
-                    for (let j = -1; j < 2; j+=2) {
-                        if((desiredPosition.x + (i*initialPosition.x)) === -j*(desiredPosition.y + (i*initialPosition.y))  ){
-                            if(!this.checkBishopIllegalMove(desiredPosition,initialPosition,boardState,team)){
-                                return true
-                            }
-                            
-                        }
-                        
-                    }
-                }
-            }
-        }
-        else if(type === PieceType.QUEEN){
-            if(!samePosition(desiredPosition,initialPosition)){
-                let validMove = false;
-                for (let i = -1; i < 2; i+=2) {
-                    for (let j = -1; j < 2; j+=2) {
-                        if((desiredPosition.x + (i*initialPosition.x)) === -j*(desiredPosition.y + (i*initialPosition.y))  ){
-                            if(!this.checkBishopIllegalMove(desiredPosition,initialPosition,boardState,team)){
-                                validMove = true
-                            }
-                            
-                        }
-                        
-                    }
-                }
-                if((desiredPosition.x === initialPosition.x && desiredPosition.y !== initialPosition.y )|| (desiredPosition.y === initialPosition.y && desiredPosition.x !== initialPosition.x )){
-                    if(!this.checkRookIllegalMove(desiredPosition,initialPosition,boardState,team)){
-                        validMove = true
-                    }
-                }
-                return validMove
-            }
-        }else if(type === PieceType.KING){
-            if(!samePosition(desiredPosition,initialPosition)){
-                let validMove = false;
-                if(!this.checkKingIllegalMove(initialPosition,desiredPosition,boardState,team)){
-                    validMove = true;
-                }
-                return validMove;
-            }
-        }
-
-
         return false;
+    }
+    getValidMoves(piece:Pieces,boardState:Pieces[]):Position[]{
+        let position: Position[]= []
+        switch (piece.type) {
+            case PieceType.PAWN:
+                position = getPossiblePawnMoves(piece,boardState)
+                break;
+            case PieceType.KNIGHT:
+                position = getPossibleKnightMoves(piece,boardState)
+                break;
+            case PieceType.ROOK:
+                position = getPossibleRookMoves(piece,boardState)
+                break;
+            case PieceType.BISHOP:
+                position = getPossibleBishopMoves(piece,boardState);
+                break;
+            case PieceType.QUEEN:
+                position = getPossibleQueenMoves(piece,boardState)
+                break;
+            case PieceType.KING:
+                position = getPossibleKingMoves(piece,boardState)
+                break;
+            default: return [];
+                break;
+        }
+        return position
     }
 }

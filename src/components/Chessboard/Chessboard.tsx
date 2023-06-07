@@ -19,7 +19,17 @@ const Chessboard = (props: Props) => {
   const [grabPosition, setGrabPosition] = useState<Position >({x:-1,y:-1});
   const rules = new Rules();
   const [colorOfPiece, setColorOfPiece] = useState("W");
+
+  function updatedValidMoves (){
+    setPieces(piece=>{
+      return piece.map(p=> {
+        p.possibleMoves = rules.getValidMoves(p,pieces);
+        return p;
+      })
+    })
+  }
   function grabPiece(event: React.MouseEvent) {
+    updatedValidMoves();
     const element = event.target as HTMLElement;
     const chessboard = chessboardref.current
     if (element.classList.contains("chess-piece") && chessboard) {
@@ -144,8 +154,12 @@ const Chessboard = (props: Props) => {
       let num = i + j + 2;
       const piece = pieces.find(p=> samePosition(p.position, {x:i,y:j}))
       let image = piece ? piece.image: undefined;
-     
-      board.push(<Tile key={`${i},${j}`} number={num} image={image} />);
+      
+      let currentPiece = pieces.find(p=> samePosition(p.position,grabPosition))
+      let highlight = currentPiece?.possibleMoves? currentPiece.possibleMoves.some(p=> samePosition(p,{x:i,y:j})) : false;
+      // console.log("rendered grabbed Piece: ",currentPiece?.possibleMoves,i,j, highlight);
+      
+      board.push(<Tile key={`${i},${j}`} number={num} image={image} highlight={highlight} />);
     }
   }
   
